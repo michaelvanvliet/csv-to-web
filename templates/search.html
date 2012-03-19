@@ -15,7 +15,7 @@
 			</tr><tr>			
 				<td>
 					<form action="/search/searchById" method="post"> 
-						<input type="number" name="compound_id" min="0" placeholder="Compound ID" value="${templateVars.params.compound_id ?: 1}">
+						<input type="number" name="compound_id" min="0" placeholder="Compound ID" value="${templateVars?.params?.compound_id ?: 1}">
 						<input type="submit" value="Search" />
 					</form>
 				</td>
@@ -28,7 +28,7 @@
 			</tr><tr>			
 				<td>
 					<form action="/search/searchByInChI" method="post"> 
-						<input type="text" name="inchi" placeholder="Elements)" value="${templateVars.params.inchi ?: 'InChI=1S/C2'}" />
+						<input type="text" name="inchi" placeholder="Elements)" value="${templateVars?.params?.inchi ?: 'InChI=1S/C2'}" />
 						<input type="submit" value="Search" />
 					</form>
 				</td>
@@ -41,7 +41,7 @@
 			</tr><tr>			
 				<td>
 					<form action="/search/searchByElements" method="post"> 
-						<input type="text" name="elements" placeholder="Elements)" value="${templateVars.params.elements ?: 'C2'}" />
+						<input type="text" name="elements" placeholder="Elements)" value="${templateVars?.params?.elements ?: 'C2'}" />
 						<input type="submit" value="Search" />
 					</form>
 				</td>

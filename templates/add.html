@@ -1,0 +1,31 @@
+<html>
+	<head>
+		<title>Simple Chemical Compound Database</title>
+	</head>
+	<body>
+		<h1>Simple Chemical Compound database</h1>
+		
+		${templateVars}
+		
+		<table>
+			<tr>
+				<td valign="top">
+					<b>Add compounds</b>
+				</td>
+			</tr><tr>			
+				<td>
+					<form action="/add" method="post"> 
+						<textarea style="width: 600px; height: 400px" name="compounds" required></textarea>
+						<input type="submit" value="Add" />
+					</form>
+				</td>
+			</tr>
+		</table>
+		example how to add compounds:<br />
+		id,InChI,elements<br />
+		0,InChI=1S/C2H5O4,C2H5O4<br />
+		1,InChI=1S/C2H6O6,C2H6O6<br />
+		2,InChI=1S/C2H5O2,C2H5O2<br />
+		3,InChI=1S/C2H8O4,C2H8O4<br />
+	</body>
+</html>

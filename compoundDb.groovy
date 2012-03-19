@@ -1,13 +1,25 @@
 /**
- ___   ___  ___    ____  ____ 
-/ __) / __)/ __)  (  _ \(  _ \
-\__ \( (__( (__    )(_) )) _ <
-(___/ \___)\___)()(____/(____/
-                                 	
-	This is an example how to create a simple chemical compound database (SCC.DB) using:
-	Groovy (http://groovy.codehaus.org)
-	Ratpack (https://github.com/bleedingwolf/Ratpack)
-	MongoDB (http://www.mongodb.org/)
+
+	This is an example how to create a simple chemical compound database using:
+	
+	- Groovy (http://groovy.codehaus.org)
+	- Gradle (http://www.gradle.org
+	- Ratpack (https://github.com/bleedingwolf/Ratpack)
+	- GMongo (https://github.com/poiati/gmongo)
+	- MongoDB (http://www.mongodb.org)
+	
+	 ____  ____  ____  ____  ____  ____ 
+	||S ||||i ||||m ||||p ||||l ||||e ||
+	|/__\||/__\||/__\||/__\||/__\||/__\|
+		 ____  ____  ____  ____  ____  ____  ____  ____ 
+		||C ||||h ||||e ||||m ||||i ||||c ||||a ||||l ||
+		|/__\||/__\||/__\||/__\||/__\||/__\||/__\||/__\|
+			 ____  ____  ____  ____  ____  ____  ____  ____ 
+			||C ||||o ||||m ||||p ||||o ||||u ||||n ||||d ||
+			|/__\||/__\||/__\||/__\||/__\||/__\||/__\||/__\|
+				 ____  ____  ____  ____  ____  ____  ____  ____ 
+				||D ||||a ||||t ||||a ||||b ||||a ||||s ||||e ||
+				|/__\||/__\||/__\||/__\||/__\||/__\||/__\||/__\|
 	
 	Copyright 2012 Michael van Vliet, Netherlands Metabolomics Centre (NMC) and Netherlands Bioinformatics Centre (NBIC) 
 
@@ -52,9 +64,15 @@ if (bootstrap){
 
 	def rand  = new Random()
 
-	100.times { cid ->
+	1000.times { cid ->
 		def elements = 'C' + rand.nextInt(7) + 'H' + rand.nextInt(7) + 'O' + rand.nextInt(7)
-		db.compounds << [id: cid, InChI: 'InChI=1S/' + elements + '/' + cid, elements: elements]
+		db.compounds << [	
+			id: cid, 
+			InChI: 'InChI=1S/' + elements + '/' + cid,
+			elements: elements,
+			created: new Date().time,
+			updated: new Date().time
+		]
 	}
 }
 
@@ -75,7 +93,7 @@ get("/compound/:id") { respond(findCompoundById(db, urlparams.id as int)) }
 get("/elements/:elements") { respond(findCompoundByElements(db, urlparams.elements as String)) }
 
 // search page
-get("/search") { render "search.html", [results: [:]] }
+get("/search") { render "search.html", [templateVars: [:]] }
 
 register(["get", "post"], "/search/:method") {
 
@@ -117,6 +135,47 @@ register(["get", "post"], "/search/:method") {
 	render "search.html", [templateVars: templateVars]
 }
 
+// add compounds page
+get("/add") { render "add.html", [templateVars: [:]] }
+
+post("/add") {
+	println params.compounds
+	render "add.html", [templateVars: [:]] 
+}
+	
+//export compounds
+get("/export") {
+
+	def csvOut = ''
+	
+	//fetch all compounds
+	def compounds 	= formatResponse(db.compounds.find())
+
+	//prepare the headers
+	def headers = [].toList()	
+	compounds.each {
+		headers = it.keySet().toList() + headers
+	}
+	headers = headers.unique()
+	
+	//iterate over all available headers
+	csvOut += '"id","' + headers.findAll { it != 'id' }.sort { a,b -> a <=> b}.join('","') + "\"\n"
+
+	//iterate over compounds
+	compounds.each { compound ->
+		
+		csvOut += compound.id
+		
+		//iterate over all available headers
+		headers.findAll { it != 'id' }.sort { a,b -> a <=> b}.each { header ->			
+			csvOut +=  ',"' + compound."${header}" + '"'
+		}
+		
+		csvOut +=  "\n"
+	}	
+
+	return csvOut
+}
 
 /**
 	Methods for fetching data, data manipulation and fetch response

@@ -6,7 +6,7 @@ import groovy.json.JsonOutput
 import java.util.Random
 
 def gmongo = new GMongo('localhost:27017')
-def db = gmongo.getDB('nmc_db_dev')
+def db = gmongo.getDB('simpleCompoundDatabase')
 
 //prepare and send the actual response
 def respond(response){

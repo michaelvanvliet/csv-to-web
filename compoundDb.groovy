@@ -39,7 +39,11 @@
   
 // imports
 @Grab('com.gmongo:gmongo:0.8')
-import com.gmongo.GMongo
+@Grab('commons-fileupload:commons-fileupload:1.2.2')
+@Grab('commons-io:commons-io:1.3.2')
+import com.gmongo.GMongo 
+import org.apache.commons.fileupload.servlet.ServletFileUpload
+import org.apache.commons.fileupload.disk.DiskFileItemFactory
 import groovy.json.JsonBuilder
 import groovy.json.JsonOutput
 import java.util.Random
@@ -65,7 +69,7 @@ if (bootstrap){
 
 	def rand  = new Random()
 
-	50.times { cid ->
+	5.times { cid ->
 		def elements = 'C' + rand.nextInt(7) + 'H' + rand.nextInt(7) + 'O' + rand.nextInt(7)
 		db.compounds << [	
 			id: cid, 
@@ -120,10 +124,42 @@ get("/import") { render "import.html", [templateVars: [:]] }
 
 post("/import") {
 
-	request.getHeaderNames().each { hn ->
-		println hn
+	boolean isMultipart = ServletFileUpload.isMultipartContent(request)
+	if (isMultipart) {
+		// Create a factory for disk-based file items
+		def factory = new DiskFileItemFactory()
+
+		// Create a new file upload handler
+		def upload = new ServletFileUpload(factory)
+
+		// Parse the request
+		List files = upload.parseRequest(request)
+		def compoundData = ''
+			
+		files.each {
+			compoundData += it.getString()
+		}
+		
+		def lines = compoundData.split('\n')
+		def header = lines[0].split(',')
+		
+		//check if the the header contains at least an ID.
+		if (header[0] == '"id"'){
+		
+			// iterate over the lines from the file to import
+			lines.each { line ->
+				
+				//init empty compound
+				def compound = [:]
+				
+				line.split(",").eachWithIndex { rowValue, columnIndex ->
+					compound[header[columnIndex]] = rowValue
+				} 
+				
+				db.compounds << compound
+			}
+		}		
 	}
-	//def file = request.getFile("fileUpload") 
 
 	render "import.html", [templateVars: [:]] 
 }

@@ -35,7 +35,7 @@ This should start an instance of Jetty. Output looks like this:
 	
 Now open a browser and enter: http://localhost:8080
 
-More information on the [https://github.com/michaelvanvliet/Simple-Compound-Database/wiki](wiki)...
+More information on the [https://github.com/michaelvanvliet/Simple-Compound-Database/wiki](wiki)
 
 Credits
 -------

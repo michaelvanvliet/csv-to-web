@@ -3,10 +3,7 @@
 		<title>Simple Chemical Compound Database</title>
 	</head>
 	<body>
-		<h1>Simple Chemical Compound database</h1>
-		
-		${templateVars}
-		
+		<h1>Simple Chemical Compound database</h1>		
 		<table>
 			<tr>
 				<td valign="top">
@@ -14,14 +11,13 @@
 				</td>
 			</tr><tr>			
 				<td>
-					<form action="/add" method="post"> 
-						<textarea style="width: 600px; height: 400px" name="compounds" required></textarea>
-						<input type="submit" value="Add" />
+					<form method="post" enctype="multipart/form-data" action="import">
+						File to upload: <input type="file" name="fileUpload"><input type="submit" value="Upload">
 					</form>
 				</td>
 			</tr>
 		</table>
-		example how to add compounds:<br />
+		example how the file should look:<br />
 		id,InChI,elements<br />
 		0,InChI=1S/C2H5O4,C2H5O4<br />
 		1,InChI=1S/C2H6O6,C2H6O6<br />

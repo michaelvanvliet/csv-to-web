@@ -51,6 +51,7 @@ def mdbPort 		= 27017 // port where mongoDB listens
 def mdbDatabase 	= 'simpleCompoundDatabase' // name of the database
 def bootstrap 		= true // true/false
 def rpPort			= 8080 //define the (Ratpack) http port to run on
+def exportsFolder	= 'exports'
  
  
 // connect to the database
@@ -64,7 +65,7 @@ if (bootstrap){
 
 	def rand  = new Random()
 
-	1000.times { cid ->
+	50.times { cid ->
 		def elements = 'C' + rand.nextInt(7) + 'H' + rand.nextInt(7) + 'O' + rand.nextInt(7)
 		db.compounds << [	
 			id: cid, 
@@ -81,7 +82,7 @@ set 'templateRoot', 'templates'
 set 'port', rpPort
 
 // homepage
-get("/") { render "index.html" }
+get("/") { render "index.html", [compoundCount: db.compounds.find().size()] }
 
 // the a list of all compounds in the database
 get("/list") { respond(db.compounds.find()) }
@@ -101,80 +102,74 @@ register(["get", "post"], "/search/:method") {
 	def response
 
 	switch (urlparams.method){
-
-		//ID
-		case 'searchById'			:	if (params.compound_id){ 
-											response = respond(
-												findCompoundById(db, params.compound_id as int)
-											) 
-										}
-										break;
-
-		//ELEMENTS
-		case 'searchByElements'		:	if (params.elements) { 
-											response = respond(
-												findCompoundByElements(db, params.elements as String)
-											) 
-										}
-										break;
-										
-		//INCHI
-		case 'searchByInChI'		:	if (params.inchi) { 
-											response = respond(
-												findCompoundByInchi(db, params.inchi as String)
-											) 
-										}
-										break;										
+		case 'searchById'			:	if (params.compound_id){ response = respond( findCompoundById(db, params.compound_id as int)) }; break;
+		case 'searchByElements'		:	if (params.elements) { response = respond( findCompoundByElements(db, params.elements as String)) }; break;
+		case 'searchByInChI'		:	if (params.inchi) { response = respond( findCompoundByInchi(db, params.inchi as String)) }; break;										
 	}
 	
 	// prepare the variables for the template
-	templateVars[urlparams.method] 	= response
-	templateVars['urlparams'] 		= urlparams
-	templateVars['params'] 			= params
+	templateVars[urlparams.method] 		= response
+	templateVars['urlparams'] 			= urlparams
+	templateVars['params'] 				= params
 	
 	render "search.html", [templateVars: templateVars]
 }
 
 // add compounds page
-get("/add") { render "add.html", [templateVars: [:]] }
+get("/import") { render "import.html", [templateVars: [:]] }
 
-post("/add") {
-	println params.compounds
-	render "add.html", [templateVars: [:]] 
+post("/import") {
+
+	request.getHeaderNames().each { hn ->
+		println hn
+	}
+	//def file = request.getFile("fileUpload") 
+
+	render "import.html", [templateVars: [:]] 
+}
+
+// register exportsFolder
+get("/" + exportsFolder + "/:file"){
+	return new File(exportsFolder + '/' + urlparams.file).text
 }
 	
 //export compounds
 get("/export") {
-
-	def csvOut = ''
 	
-	//fetch all compounds
-	def compounds 	= formatResponse(db.compounds.find())
-
-	//prepare the headers
-	def headers = [].toList()	
-	compounds.each {
-		headers = it.keySet().toList() + headers
-	}
-	headers = headers.unique()
+	if (params.doExport){
 	
-	//iterate over all available headers
-	csvOut += '"id","' + headers.findAll { it != 'id' }.sort { a,b -> a <=> b}.join('","') + "\"\n"
+		//fetch all compounds
+		def compounds = formatResponse(db.compounds.find())
 
-	//iterate over compounds
-	compounds.each { compound ->
+		//prepare the headers
+		def headers = [].toList()	
+		compounds['results'].each {
+			headers = it.keySet().toList() + headers
+		}
+		headers = headers.unique()
+	
+		// add the header to the CSV
+		def csvOut = '"id","' + headers.findAll { it != 'id' }.sort { a,b -> a <=> b}.join('","') + "\"\n"
+
+		//iterate over compounds
+		compounds['results'].each { compound ->
 		
-		csvOut += compound.id
+			csvOut += compound.id
 		
-		//iterate over all available headers
-		headers.findAll { it != 'id' }.sort { a,b -> a <=> b}.each { header ->			
-			csvOut +=  ',"' + compound."${header}" + '"'
+			//iterate over all available headers
+			headers.findAll { it != 'id' }.sort { a,b -> a <=> b}.each { header ->			
+				csvOut +=  ',"' + compound."${header}" + '"'
+			}
+			
+			csvOut +=  "\n"
 		}
 		
-		csvOut +=  "\n"
+		//write export to file
+		new File(exportsFolder).mkdirs()
+		new File(exportsFolder + '/export.' +  new Date().time + '.csv') << csvOut		
 	}	
-
-	return csvOut
+	
+	render "export.html", [exportDirectory: new File(exportsFolder)] 
 }
 
 /**
@@ -188,7 +183,7 @@ private respond(response){
 
 // define a uniform layout of the response
 private formatResponse(result) {
-	return result.collect { it.findAll { it.key != '_id' } }.sort { a,b -> a.id <=> b.id}
+	return ['results': result.collect { it.findAll { it.key != '_id' } }.sort { a,b -> a.id <=> b.id}, 'count': result.size()]
 }
 
 // find compound by id

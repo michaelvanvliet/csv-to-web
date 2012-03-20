@@ -1,0 +1,21 @@
+<html>
+	<head>
+		<title>Simple Chemical Compound Database</title>
+	</head>
+	<body>
+		<h1>Simple Chemical Compound database</h1>		
+		<table>
+			<tr>
+				<td valign="top">
+					<b>Exports</b> (<a href="./export?doExport=true">run export</a>)
+				</td>
+			</tr><tr>			
+				<td>
+					<% exportDirectory.eachFile { file -> %>
+							<a href="${exportDirectory.name}/${file.name}">${file.name}</a><br />
+					<% } %>
+				</td>
+			</tr>
+		</table>
+	</body>
+</html>

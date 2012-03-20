@@ -3,49 +3,40 @@
 		<title>Simple Chemical Compound Database</title>
 	</head>
 	<body>
-		<h1>Simple Chemical Compound database</h1>
-		
-		${templateVars}
-		
+		<h1>Simple Chemical Compound database</h1>		
+
 		<table>
 			<tr>
-				<td valign="top">
+				<td valign="top" nowrap>
 					<b>Search for ID</b>
-				</td>
-			</tr><tr>			
-				<td>
 					<form action="/search/searchById" method="post"> 
 						<input type="number" name="compound_id" min="0" placeholder="Compound ID" value="${templateVars?.params?.compound_id ?: 1}">
 						<input type="submit" value="Search" />
 					</form>
-				</td>
-			</tr>
-			<tr><td></td></tr>
-			<tr>
-				<td valign="top">
+					
+					<br />
 					<b>Search for InChI (includes partial search)</b>
-				</td>
-			</tr><tr>			
-				<td>
 					<form action="/search/searchByInChI" method="post"> 
 						<input type="text" name="inchi" placeholder="Elements)" value="${templateVars?.params?.inchi ?: 'InChI=1S/C2'}" />
 						<input type="submit" value="Search" />
 					</form>
-				</td>
-			</tr>
-			<tr><td></td></tr>
-			<tr>
-				<td valign="top">
+
+					<br />
 					<b>Search for elemental formula (includes partial search)</b>
-				</td>
-			</tr><tr>			
-				<td>
 					<form action="/search/searchByElements" method="post"> 
 						<input type="text" name="elements" placeholder="Elements)" value="${templateVars?.params?.elements ?: 'C2'}" />
 						<input type="submit" value="Search" />
 					</form>
 				</td>
-			</tr>		
+				<td valign="top">
+					<%
+						templateVars.each { 
+							print '<b>' + it.key + '</b><br />'
+							print '<pre>' + it.value + '</pre><br /><br />'
+						}
+					%>
+				</td>
+			</tr>
 		</table>
 	</body>
 </html>

@@ -8,9 +8,9 @@
 		<table>
 			<tr>
 				<td valign="top" nowrap>
-					<b>Search for ID</b>
-					<form action="/search/searchById" method="post"> 
-						<input type="number" name="compound_id" min="0" placeholder="Compound ID" value="${templateVars?.params?.compound_id ?: 1}">
+					<b>Search for CID</b>
+					<form action="/search/searchByCid" method="post"> 
+						<input type="number" name="cid" min="0" placeholder="Compound ID" value="${templateVars?.params?.cid ?: 1}">
 						<input type="submit" value="Search" />
 					</form>
 					

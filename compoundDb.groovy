@@ -50,12 +50,13 @@ import java.util.Random
 
 
 // config
-def mdbHost 		= 'localhost' // host where mongoDB is running
-def mdbPort 		= 27017 // port where mongoDB listens
-def mdbDatabase 	= 'simpleCompoundDatabase' // name of the database
-def bootstrap 		= true // true/false
-def rpPort		= 8080 //define the (Ratpack) http port to run on
-def exportsFolder	= 'exports'
+def mdbHost				= 'localhost' // host where mongoDB is running
+def mdbPort				= 27017 // port where mongoDB listens
+def mdbDatabase			= 'simpleCompoundDatabase' // name of the database
+def bootstrap			= true // true/false
+def rpPort				= 8080 //define the (Ratpack) http port to run on
+def exportsFolder		= 'exports'
+def reservedProperties	= ['cid','created','modified']
  
  
 // connect to the database
@@ -71,13 +72,7 @@ if (bootstrap){
 
 	5.times { cid ->
 		def elements = 'C' + rand.nextInt(7) + 'H' + rand.nextInt(7) + 'O' + rand.nextInt(7)
-		db.compounds << [	
-			id: cid, 
-			InChI: 'InChI=1S/' + elements + '/' + cid,
-			elements: elements,
-			created: new Date().time,
-			updated: new Date().time
-		]
+		upsertCompound(db, [cid: cid, InChI: 'InChI=1S/' + elements + '/' + cid, elements: elements])
 	}
 }
 
@@ -92,7 +87,7 @@ get("/") { render "index.html", [compoundCount: db.compounds.find().size()] }
 get("/list") { respond(db.compounds.find()) }
 
 // a single (full details) compound by ID
-get("/compound/:id") { respond(findCompoundById(db, urlparams.id as int)) }
+get("/compound/:cid") { respond(findCompoundByCid(db, urlparams.cid as int)) }
 
 // a list of compounds by Elemental Composition  (uses regular expressions)
 get("/elements/:elements") { respond(findCompoundByElements(db, urlparams.elements as String)) }
@@ -106,7 +101,7 @@ register(["get", "post"], "/search/:method") {
 	def response
 
 	switch (urlparams.method){
-		case 'searchById'			:	if (params.compound_id){ response = respond( findCompoundById(db, params.compound_id as int)) }; break;
+		case 'searchByCid'			:	if (params.cid){ response = respond( findCompoundByCid(db, params.cid as int)) }; break;
 		case 'searchByElements'		:	if (params.elements) { response = respond( findCompoundByElements(db, params.elements as String)) }; break;
 		case 'searchByInChI'		:	if (params.inchi) { response = respond( findCompoundByInchi(db, params.inchi as String)) }; break;										
 	}
@@ -120,7 +115,7 @@ register(["get", "post"], "/search/:method") {
 }
 
 // add compounds page
-get("/import") { render "import.html", [templateVars: [:]] }
+get("/import") { render "import.html" }
 
 post("/import") {
 
@@ -134,34 +129,40 @@ post("/import") {
 
 		// Parse the request
 		List files = upload.parseRequest(request)
-		def compoundData = ''
-			
-		files.each {
-			compoundData += it.getString()
-		}
 		
+		// Merge file(s)
+		def compoundData = ''	
+		files.each { compoundData += it.getString() }
+		
+		// Create lists with the lines and read the header
 		def lines = compoundData.split('\n')
-		def header = lines[0].split(',')
+		def header = lines[0].split("\t")
 		
-		//check if the the header contains at least an ID.
-		if (header[0] == '"id"'){
+		//check if the the header contains at least a cid property.
+		if (header[0] == 'cid'){
 		
 			// iterate over the lines from the file to import
 			lines.each { line ->
-				
+					
 				//init empty compound
 				def compound = [:]
 				
-				line.split(",").eachWithIndex { rowValue, columnIndex ->
-					compound[header[columnIndex]] = rowValue
-				} 
+				line.split("\t").eachWithIndex { rowValue, columnIndex ->
+					if (header[columnIndex] != rowValue){ // make sure we skip the header when importing
+						compound[header[columnIndex]] = rowValue
+					}
+				}
 				
-				db.compounds << compound
+				if (compound != [:]){		
+					//update or insert this compound
+					upsertCompound(db, compound)
+				}
+					
 			}
 		}		
 	}
 
-	render "import.html", [templateVars: [:]] 
+	render "import.html" 
 }
 
 // register exportsFolder
@@ -185,16 +186,16 @@ get("/export") {
 		headers = headers.unique()
 	
 		// add the header to the CSV
-		def csvOut = '"id","' + headers.findAll { it != 'id' }.sort { a,b -> a <=> b}.join('","') + "\"\n"
+		def csvOut = "cid\t" + headers.findAll { reservedProperties.count(it) != 1 }.sort { a,b -> a <=> b}.join("\t") + "\n"
 
 		//iterate over compounds
 		compounds['results'].each { compound ->
 		
-			csvOut += compound.id
+			csvOut += compound.cid
 		
 			//iterate over all available headers
-			headers.findAll { it != 'id' }.sort { a,b -> a <=> b}.each { header ->			
-				csvOut +=  ',"' + compound."${header}" + '"'
+			headers.findAll { reservedProperties.count(it) != 1 }.sort { a,b -> a <=> b}.each { header ->			
+				csvOut +=  "\t" + compound."${header}"
 			}
 			
 			csvOut +=  "\n"
@@ -223,8 +224,8 @@ private formatResponse(result) {
 }
 
 // find compound by id
-private findCompoundById(db, int compoundId){
-	return db.compounds.find(id: compoundId)
+private findCompoundByCid(db, int cid){
+	return db.compounds.find(cid: cid)
 }
 
 // find compounds by elemental composition
@@ -235,4 +236,29 @@ private findCompoundByElements(db, String elements){
 // find compounds by inchi
 private findCompoundByInchi(db, String inchi){
 	return db.compounds.find(InChI: ~"${inchi}")
+}
+
+// insert or update a compound
+private upsertCompound(db, HashMap compound){
+	
+	//there are some reserved compound properties (e.g id, created, modified)
+	compound['cid'] 		= compound['cid'] as int
+	compound['modified'] 	= new Date().time
+	
+	try {
+		// if we cannot find a compound with this id, we set the created to match the modified property
+		if (!findCompoundByCid(db, compound['cid'])){
+			//TODO: make this look for the highest CID and increment this with one, the way we do it now only works because we start CID with 0
+			compound['cid']		= (db.compounds.find().size() ?: 0) as int //force the CID to auto-increment 
+			compound['created'] = compound['modified']
+		}
+		
+		// send changes to the database
+		db.compounds.update([cid: compound['cid']], [$set: compound], true)
+	} catch(e) {
+		log.error('Error saving the compound: ' + e)
+		return false
+	}	
+	
+	return true
 }

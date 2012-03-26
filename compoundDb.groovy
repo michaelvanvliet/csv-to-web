@@ -54,7 +54,7 @@ def mdbHost 		= 'localhost' // host where mongoDB is running
 def mdbPort 		= 27017 // port where mongoDB listens
 def mdbDatabase 	= 'simpleCompoundDatabase' // name of the database
 def bootstrap 		= true // true/false
-def rpPort			= 8080 //define the (Ratpack) http port to run on
+def rpPort		= 8080 //define the (Ratpack) http port to run on
 def exportsFolder	= 'exports'
  
  

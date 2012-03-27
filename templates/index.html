@@ -1,17 +1,13 @@
-<html>
-	<head>
-		<title>Simple Chemical Compound Database</title>
-	</head>
-	<body>
-		<h1>Simple Chemical Compound database</h1>
-		
-		<a href="./search">Search</a><br />
-		<a href="./export">Export</a><br />
-		<a href="./import">Import</a><br /><br />
+<%=new File('./templates/_header.html').text%>
+
+		<p>
+			Welcome,<br />
+			First time users of the Simple Chemical Compound Database can go here for more information: <a href="https://github.com/michaelvanvliet/Simple-Compound-Database/wiki">Wiki</a><br /> 
+		</p>
 		
 		<b>API Examples</b><br />
 		<a href="./list">lists all ${compoundCount} compounds</a><br />
 		<a href="./compound/1">lists a single compound with CID 1</a><br />
 		<a href="./elements/C6">lists all compounds with 'C6' in the elements</a> (regex)<br />
-	</body>
-</html>
+
+<%=new File('./templates/_footer.html').text%>

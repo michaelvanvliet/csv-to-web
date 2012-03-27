@@ -1,42 +1,45 @@
-<html>
-	<head>
-		<title>Simple Chemical Compound Database</title>
-	</head>
-	<body>
-		<h1>Simple Chemical Compound database</h1>		
+<%=new File('./templates/_header.html').text%>		
 
 		<table>
 			<tr>
-				<td valign="top" nowrap>
-					<b>Search for CID</b>
-					<form action="/search/searchByCid" method="post"> 
-						<input type="number" name="cid" min="0" placeholder="Compound ID" value="${templateVars?.params?.cid ?: 1}">
-						<input type="submit" value="Search" />
+				<td style="padding:10px" valign="top" nowrap>
+					<form action="/search/listAllCompounds" method="post"> 
+						<input type="submit" value="List all compounds" />
 					</form>
 					
-					<br />
-					<b>Search for InChI (includes partial search)</b>
-					<form action="/search/searchByInChI" method="post"> 
-						<input type="text" name="inchi" placeholder="Elements)" value="${templateVars?.params?.inchi ?: 'InChI=1S/C2'}" />
-						<input type="submit" value="Search" />
+					<form action="/search/searchByCid" method="post"> 
+						<input type="number" name="cid" min="0" placeholder="cid" value="${templateVars?.params?.cid ?: ''}" style="width:250px;">
+						<input type="submit" value="Search for compound (cid)" style="width:200px;" />
 					</form>
-
-					<br />
-					<b>Search for elemental formula (includes partial search)</b>
-					<form action="/search/searchByElements" method="post"> 
-						<input type="text" name="elements" placeholder="Elements)" value="${templateVars?.params?.elements ?: 'C2'}" />
-						<input type="submit" value="Search" />
-					</form>
-				</td>
-				<td valign="top">
+					
 					<%
-						templateVars.each { 
-							print '<b>' + it.key + '</b><br />'
-							print '<pre>' + it.value + '</pre><br /><br />'
-						}
+						templateVars.headers.each { header ->
 					%>
+							<form action="/search/searchBy_${header}" method="post"> 
+								<input type="text" name="${header}" placeholder="${header}" value="${if (templateVars?.params && templateVars?.params[header]) { templateVars?.params[header] } else { '' } }" style="width:250px;"/>
+								<input type="submit" value="Search for ${header}" style="width:200px;"/>
+							</form>
+					<%	
+						}					
+					%>
+				</td>
+				<td style="padding:10px" valign="top">
+					search <i>${templateVars?.urlparams?.method ?: ''}</i> with parameters: <b>${templateVars?.params?.collect { it }?.join(', ')}</b><br /><br />
+					
+					<table>
+						<tr><th class="searchTH">${templateVars?.headers?.collect { it }?.join('</th><th class="searchTH">')}</th></tr>
+							<%
+								if (templateVars?.urlparams?.method){
+									templateVars[templateVars.urlparams.method].each { compoundProperty ->
+										%>
+											<tr><td class="searchTD" nowrap>${templateVars?.headers?.collect { compoundProperty[it] }?.join('</td><td class="searchTD" nowrap>')}</td></tr>
+										<%
+									}
+								}
+							%>
+					</table>
 				</td>
 			</tr>
 		</table>
-	</body>
-</html>
+		
+<%=new File('./templates/_footer.html').text%>

@@ -57,7 +57,7 @@ def bootstrap			= false // true/false
 def clearAtStartup		= true //true/false
 def rpPort				= 8080 //define the (Ratpack) http port to run on
 def exportsFolder		= 'exports'
-def reservedProperties	= ['cid','created','modified']
+def reservedProperties	= ['_id','cid','created','modified']
  
  
 // connect to the database
@@ -75,7 +75,14 @@ if (bootstrap){
 
 	5.times { cid ->
 		def elements = 'C' + rand.nextInt(7) + 'H' + rand.nextInt(7) + 'O' + rand.nextInt(7)
-		upsertCompound(db, [InChI: 'InChI=1S/' + elements + '/' + cid, elements: elements])
+		upsertCompound(db, [
+			InChI: 'InChI=1S/' + elements + '/' + cid, 
+			elements: elements, 
+			contributor: 'myEmployer',
+			owner: 'me',
+			database: mdbDatabase, 
+			host: mdbHost	]
+		)
 	}
 }
 
@@ -96,7 +103,7 @@ get("/compound/:cid") { respond(findCompoundByCid(db, urlparams.cid as int)) }
 get("/elements/:elements") { respond(findCompoundByElements(db, urlparams.elements as String)) }
 
 // search page
-get("/search") { render "search.html", [templateVars: [:]] }
+get("/search") { render "search.html", [templateVars: ['headers': findAllHeaders(db, reservedProperties)]] }
 
 register(["get", "post"], "/search/:method") {
 
@@ -104,15 +111,17 @@ register(["get", "post"], "/search/:method") {
 	def response
 
 	switch (urlparams.method){
-		case 'searchByCid'			:	if (params.cid){ response = respond( findCompoundByCid(db, params.cid as int)) }; break;
-		case 'searchByElements'		:	if (params.elements) { response = respond( findCompoundByElements(db, params.elements as String)) }; break;
-		case 'searchByInChI'		:	if (params.inchi) { response = respond( findCompoundByInchi(db, params.inchi as String)) }; break;										
+		case 'listAllCompounds'		:	response = findAllCompounds(db); break;
+		case 'searchByCid'			:	if (params.cid){ response = findCompoundByCid(db, params.cid as int) }; break;
+		default						:	def label = urlparams.method.split('_')[1]
+										response = findCompoundByLabel(db, label, params."${label}" as String);										
 	}
 	
 	// prepare the variables for the template
 	templateVars[urlparams.method] 		= response
 	templateVars['urlparams'] 			= urlparams
 	templateVars['params'] 				= params
+	templateVars['headers']				= findAllHeaders(db, reservedProperties)
 	
 	render "search.html", [templateVars: templateVars]
 }
@@ -138,7 +147,7 @@ post("/import") {
 		files.each { compoundData += it.getString() }
 		
 		// Create lists with the lines and read the header
-		def lines = compoundData.split('\n')
+		def lines = compoundData.replaceAll('\r\n','\n').replaceAll('\r','\n').split('\n')
 		def header = lines[0].split("\t")
 		
 		// iterate over the lines from the file to import
@@ -149,6 +158,12 @@ post("/import") {
 			
 			line.split("\t").eachWithIndex { rowValue, columnIndex ->
 				if (header[columnIndex] != rowValue){ // make sure we skip the header when importing
+					
+					//see if we have to trim the value
+					if (rowValue[0] == '"' && rowValue[-1] == '"'){
+						rowValue = rowValue[1..-2] // trim the first and last "
+					}
+					
 					compound[header[columnIndex]] = rowValue
 				}
 			}
@@ -178,14 +193,10 @@ get("/export") {
 		def compounds = formatResponse(db.compounds.find())
 
 		//prepare the headers
-		def headers = [].toList()	
-		compounds['results'].each {
-			headers = it.keySet().toList() + headers
-		}
-		headers = headers.unique()
+		def headers = findAllHeaders(db, reservedProperties).sort { a,b -> a <=> b}
 	
 		// add the header to the CSV
-		def csvOut = "cid\t" + headers.findAll { reservedProperties.count(it) != 1 }.sort { a,b -> a <=> b}.join("\t") + "\n"
+		def csvOut = "cid\t" + headers.join("\t") + "\n"
 
 		//iterate over compounds
 		compounds['results'].each { compound ->
@@ -193,7 +204,7 @@ get("/export") {
 			csvOut += compound.cid
 		
 			//iterate over all available headers
-			headers.findAll { reservedProperties.count(it) != 1 }.sort { a,b -> a <=> b}.each { header ->			
+			headers.each { header ->			
 				csvOut +=  "\t" + compound."${header}"
 			}
 			
@@ -222,19 +233,34 @@ private formatResponse(result) {
 	return ['results': result.collect { it.findAll { it.key != '_id' } }.sort { a,b -> a.id <=> b.id}, 'count': result.size()]
 }
 
+// find all compounds
+private findAllCompounds(db){
+	return db.compounds.find()
+}
+
 // find compound by id
 private findCompoundByCid(db, int cid){
 	return db.compounds.find(cid: cid)
 }
 
-// find compounds by elemental composition
-private findCompoundByElements(db, String elements){
-	return db.compounds.find(elements: ~"${elements.toUpperCase()}")
+// find compounds by a label
+private findCompoundByLabel(db, String label, String labelValue){
+	
+	def findHash = [:]
+		findHash["${label}"] = ~"${labelValue}"
+	
+	return db.compounds.find(findHash)
 }
 
-// find compounds by inchi
-private findCompoundByInchi(db, String inchi){
-	return db.compounds.find(InChI: ~"${inchi}")
+private findAllHeaders(db, headersToSkip = []){
+
+	//prepare the headers
+	def headers = [].toList()
+	db.compounds.find().each {
+		headers = it.keySet().toList() + headers
+	}
+	
+	return headers.unique().findAll { headersToSkip.count(it) != 1 }.sort { a,b -> a <=> b}
 }
 
 // insert or update a compound

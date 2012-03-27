@@ -53,7 +53,8 @@ import java.util.Random
 def mdbHost				= 'localhost' // host where mongoDB is running
 def mdbPort				= 27017 // port where mongoDB listens
 def mdbDatabase			= 'simpleCompoundDatabase' // name of the database
-def bootstrap			= true // true/false
+def bootstrap			= false // true/false
+def clearAtStartup		= true //true/false
 def rpPort				= 8080 //define the (Ratpack) http port to run on
 def exportsFolder		= 'exports'
 def reservedProperties	= ['cid','created','modified']
@@ -63,16 +64,18 @@ def reservedProperties	= ['cid','created','modified']
 def gmongo	= new GMongo	("${mdbHost}:${mdbPort}")
 def db 		= gmongo.getDB	("${mdbDatabase}")
 
+//check if we need to clear the database before starting
+if (clearAtStartup == true){
+	db.compounds.drop() //clear old stuff
+}
 
 // bootstrap
 if (bootstrap){
-	db.compounds.drop() //clear old stuff
-
 	def rand  = new Random()
 
 	5.times { cid ->
 		def elements = 'C' + rand.nextInt(7) + 'H' + rand.nextInt(7) + 'O' + rand.nextInt(7)
-		upsertCompound(db, [cid: cid, InChI: 'InChI=1S/' + elements + '/' + cid, elements: elements])
+		upsertCompound(db, [InChI: 'InChI=1S/' + elements + '/' + cid, elements: elements])
 	}
 }
 
@@ -138,27 +141,23 @@ post("/import") {
 		def lines = compoundData.split('\n')
 		def header = lines[0].split("\t")
 		
-		//check if the the header contains at least a cid property.
-		if (header[0] == 'cid'){
-		
-			// iterate over the lines from the file to import
-			lines.each { line ->
-					
-				//init empty compound
-				def compound = [:]
+		// iterate over the lines from the file to import
+		lines.each { line ->
 				
-				line.split("\t").eachWithIndex { rowValue, columnIndex ->
-					if (header[columnIndex] != rowValue){ // make sure we skip the header when importing
-						compound[header[columnIndex]] = rowValue
-					}
+			//init empty compound
+			def compound = [:]
+			
+			line.split("\t").eachWithIndex { rowValue, columnIndex ->
+				if (header[columnIndex] != rowValue){ // make sure we skip the header when importing
+					compound[header[columnIndex]] = rowValue
 				}
-				
-				if (compound != [:]){		
-					//update or insert this compound
-					upsertCompound(db, compound)
-				}
-					
 			}
+			
+			if (compound != [:]){		
+				//update or insert this compound
+				upsertCompound(db, compound)
+			}
+				
 		}		
 	}
 
@@ -241,22 +240,22 @@ private findCompoundByInchi(db, String inchi){
 // insert or update a compound
 private upsertCompound(db, HashMap compound){
 	
-	//there are some reserved compound properties (e.g id, created, modified)
-	compound['cid'] 		= compound['cid'] as int
-	compound['modified'] 	= new Date().time
-	
+	//there are some reserved compound properties (e.g cid, created, modified)
 	try {
 		// if we cannot find a compound with this id, we set the created to match the modified property
-		if (!findCompoundByCid(db, compound['cid'])){
+		if (compound['cid'] == null || !findCompoundByCid(db, compound['cid'])){
 			//TODO: make this look for the highest CID and increment this with one, the way we do it now only works because we start CID with 0
 			compound['cid']		= (db.compounds.find().size() ?: 0) as int //force the CID to auto-increment 
-			compound['created'] = compound['modified']
-		}
+			compound['created'] = new Date().time
+		} 
+		
+		// update the modified timestamp to track when changes are made to the compound
+		compound['modified'] = new Date().time
 		
 		// send changes to the database
 		db.compounds.update([cid: compound['cid']], [$set: compound], true)
 	} catch(e) {
-		log.error('Error saving the compound: ' + e)
+		println 'Error saving the compound: ' + e
 		return false
 	}	
 	

@@ -8,23 +8,36 @@
 		
 			.searchTD {
 				font:12px arial,sans-serif;
+				max-width:400px;
+				vertical-align:text-top;
 			}
 			
 			.searchTH {
 				font:13px arial,sans-serif;
+				vertical-align:text-top;
 				font-weight: bold;
 				text-align: left;
 			}
+			.title {
+				width: 100%;
+				text-align: center;
+			}
+			.menu {
+				width: 100%;
+				text-align: center;
+				font:15px arial,sans-serif;
+				border: thin solid #cdcdcd;
+				padding: 5px;
+			}			
 		</style>
 	</head>
 	<body>
-		<h1>Simple Chemical Compound database</h1>
+		<div class="title">
+			<h1>Simple Chemical Compound database</h1>
+		</div>
 		
-		<div id="menu">
+		<div class="menu">
 			<a href="/search">search</a>
 			<a href="/export">export</a>
 			<a href="/import">import</a>
 		</div>
-		
-		<hr size="1">
-		<br />

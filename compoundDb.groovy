@@ -266,6 +266,13 @@ private findAllHeaders(db, headersToSkip = []){
 // insert or update a compound
 private upsertCompound(db, HashMap compound){
 	
+	//some characters in property names give problems retrieving data, we force labels to CamelCase when it has a space, - or a _
+	def tempCompound = [:]
+	compound.each { propertyKey, propertyValue ->
+		tempCompound[toCamelCase(propertyKey)] = propertyValue
+	}
+	compound = tempCompound
+	
 	//there are some reserved compound properties (e.g cid, created, modified)
 	try {
 		// if we cannot find a compound with this id, we set the created to match the modified property
@@ -286,4 +293,12 @@ private upsertCompound(db, HashMap compound){
 	}	
 	
 	return true
+}
+
+private toCamelCase(String label){
+	label = label.replaceAll(/(\w)(\w*)/) { wholeMatch, initialLetter, restOfWord -> initialLetter.toUpperCase() + restOfWord }
+	label = label.split('_').collect { it[0].toUpperCase() + it.substring(1) }.join('')
+	label = label.split('-').collect { it[0].toUpperCase() + it.substring(1) }.join('')
+	
+	return label
 }

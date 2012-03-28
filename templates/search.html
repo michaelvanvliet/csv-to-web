@@ -24,20 +24,23 @@
 					%>
 				</td>
 				<td style="padding:10px" valign="top">
-					search <i>${templateVars?.urlparams?.method ?: ''}</i> with parameters: <b>${templateVars?.params?.collect { it }?.join(', ')}</b><br /><br />
 					
-					<table>
-						<tr><th class="searchTH">${templateVars?.headers?.collect { it }?.join('</th><th class="searchTH">')}</th></tr>
-							<%
-								if (templateVars?.urlparams?.method){
+					<% if (templateVars?.params){ %>
+						search <i>${templateVars?.urlparams?.method ?: ''}</i> with parameters: <b>${templateVars?.params?.collect { it }?.join(', ')}</b><br /><br />
+					<% } %> 
+					
+					<% if (templateVars?.urlparams?.method){ %>
+						<table>
+							<tr><th class="searchTH">${templateVars?.headers?.collect { it }?.join('</th><th class="searchTH">')}</th></tr>
+								<%
 									templateVars[templateVars.urlparams.method].each { compoundProperty ->
 										%>
-											<tr><td class="searchTD" nowrap>${templateVars?.headers?.collect { compoundProperty[it] }?.join('</td><td class="searchTD" nowrap>')}</td></tr>
+											<tr><td class="searchTD">${templateVars?.headers?.collect { compoundProperty[it] }?.join('</td><td class="searchTD">')}</td></tr>
 										<%
 									}
-								}
-							%>
-					</table>
+								%>
+						</table>
+					<% } %>
 				</td>
 			</tr>
 		</table>

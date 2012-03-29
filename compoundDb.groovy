@@ -57,7 +57,7 @@ def bootstrap			= false // true/false
 def clearAtStartup		= true //true/false
 def rpPort				= 8080 //define the (Ratpack) http port to run on
 def exportsFolder		= 'exports'
-def reservedProperties	= ['_id','cid','created','modified']
+def reservedProperties	= ['_id','Cid','Created','Modified']
  
  
 // connect to the database
@@ -73,10 +73,10 @@ if (clearAtStartup == true){
 if (bootstrap){
 	def rand  = new Random()
 
-	5.times { cid ->
+	5.times { Cid ->
 		def elements = 'C' + rand.nextInt(7) + 'H' + rand.nextInt(7) + 'O' + rand.nextInt(7)
 		upsertCompound(db, [
-			InChI: 'InChI=1S/' + elements + '/' + cid, 
+			InChI: 'InChI=1S/' + elements + '/' + Cid, 
 			elements: elements, 
 			contributor: 'myEmployer',
 			owner: 'me',
@@ -97,7 +97,7 @@ get("/") { render "index.html", [compoundCount: db.compounds.find().size()] }
 get("/list") { respond(db.compounds.find()) }
 
 // a single (full details) compound by ID
-get("/compound/:cid") { respond(findCompoundByCid(db, urlparams.cid as int)) }
+get("/compound/:Cid") { respond(findCompoundByCid(db, urlparams.Cid as int)) }
 
 // retrieve available labels from db
 get("/labels") { respond(findAllHeaders(db, reservedProperties)) }
@@ -115,7 +115,7 @@ register(["get", "post"], "/search/:method") {
 
 	switch (urlparams.method){
 		case 'listAllCompounds'		:	response = findAllCompounds(db); break;
-		case 'searchByCid'			:	if (params.cid){ response = findCompoundByCid(db, params.cid as int) }; break;
+		case 'searchByCid'			:	if (params.Cid){ response = findCompoundByCid(db, params.Cid as int) }; break;
 		default						:	def label = urlparams.method.split('_')[1]
 										response = findCompoundByLabel(db, label, params."${label}" as String);										
 	}
@@ -199,12 +199,12 @@ get("/export") {
 		def headers = findAllHeaders(db, reservedProperties).sort { a,b -> a <=> b}
 	
 		// add the header to the CSV
-		def csvOut = "cid\t" + headers.join("\t") + "\n"
+		def csvOut = "Cid\t" + headers.join("\t") + "\n"
 
 		//iterate over compounds
 		compounds['results'].each { compound ->
 		
-			csvOut += compound.cid
+			csvOut += compound.Cid
 		
 			//iterate over all available headers
 			headers.each { header ->			
@@ -256,8 +256,8 @@ private findAllCompounds(db){
 }
 
 // find compound by id
-private findCompoundByCid(db, int cid){
-	return db.compounds.find(cid: cid)
+private findCompoundByCid(db, int Cid){
+	return db.compounds.find(Cid: Cid)
 }
 
 // find compounds by a label
@@ -290,20 +290,22 @@ private upsertCompound(db, HashMap compound){
 	}
 	compound = tempCompound
 	
-	//there are some reserved compound properties (e.g cid, created, modified)
+	//there are some reserved compound properties (e.g Cid, Created, Modified)
 	try {
-		// if we cannot find a compound with this id, we set the created to match the modified property
-		if (compound['cid'] == null || !findCompoundByCid(db, compound['cid'])){
-			//TODO: make this look for the highest CID and increment this with one, the way we do it now only works because we start CID with 0
-			compound['cid']		= (db.compounds.find().size() ?: 0) as int //force the CID to auto-increment 
-			compound['created'] = new Date().time
+		// if we cannot find a compound with this id, we set the Created to match the Modified property
+		if (compound['Cid'] == null || !findCompoundByCid(db, compound['Cid'] as int)){
+			//TODO: make this look for the highest Cid and increment this with one, the way we do it now only works because we start Cid with 0
+			compound['Cid']		= (db.compounds.find().size() ?: 0) as int //force the Cid to auto-increment 
+			compound['Created'] = new Date().time
 		} 
 		
-		// update the modified timestamp to track when changes are made to the compound
-		compound['modified'] = new Date().time
+		// update the Modified timestamp to track when changes are made to the compound
+		compound['Modified'] = new Date().time
+		
+		println compound
 		
 		// send changes to the database
-		db.compounds.update([cid: compound['cid']], [$set: compound], true)
+		db.compounds.update([Cid: compound['Cid']], [$set: compound], true)
 	} catch(e) {
 		println 'Error saving the compound: ' + e
 		return false

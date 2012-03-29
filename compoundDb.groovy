@@ -99,11 +99,14 @@ get("/list") { respond(db.compounds.find()) }
 // a single (full details) compound by ID
 get("/compound/:cid") { respond(findCompoundByCid(db, urlparams.cid as int)) }
 
-// a list of compounds by Elemental Composition  (uses regular expressions)
-get("/elements/:elements") { respond(findCompoundByElements(db, urlparams.elements as String)) }
+// retrieve available labels from db
+get("/labels") { respond(findAllHeaders(db, reservedProperties)) }
 
 // search page
 get("/search") { render "search.html", [templateVars: ['headers': findAllHeaders(db, reservedProperties)]] }
+
+// search by label
+get("/search/:label/equals/:value"){ respond(findCompoundByLabel(db, urlparams.label, urlparams.value)) }
 
 register(["get", "post"], "/search/:method") {
 
@@ -230,7 +233,21 @@ private respond(response){
 
 // define a uniform layout of the response
 private formatResponse(result) {
-	return ['results': result.collect { it.findAll { it.key != '_id' } }.sort { a,b -> a.id <=> b.id}, 'count': result.size()]
+	
+	def formattedResults = ''
+	
+	switch(result.getClass().toString()){
+		
+		case 'class java.util.ArrayList' :	formattedResults = result.sort { a,b -> a <=> b }
+											break
+		
+		case 'class com.mongodb.DBCursor' : formattedResults = result.collect { it.findAll { it.key != '_id' } }.sort { a,b -> a.id <=> b.id }
+											break
+		
+		default : formattedResults = results
+	}
+	
+	return ['results': formattedResults, 'count': result.size()]
 }
 
 // find all compounds

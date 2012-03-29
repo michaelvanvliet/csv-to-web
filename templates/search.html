@@ -31,11 +31,15 @@
 					
 					<% if (templateVars?.urlparams?.method){ %>
 						<table>
-							<tr><th class="searchTH">${templateVars?.headers?.collect { it }?.join('</th><th class="searchTH">')}</th></tr>
+							<tr>
+								<th class="searchTH">cid</th>
+								<th class="searchTH">${templateVars?.headers?.collect { it }?.join('</th><th class="searchTH">')}</th></tr>
 								<%
 									templateVars[templateVars.urlparams.method].each { compoundProperty ->
 										%>
-											<tr><td class="searchTD">${templateVars?.headers?.collect { compoundProperty[it] }?.join('</td><td class="searchTD">')}</td></tr>
+											<tr>
+												<td class="searchTD">${compoundProperty.cid}</td>
+												<td class="searchTD">${templateVars?.headers?.collect { compoundProperty[it] }?.join('</td><td class="searchTD">')}</td></tr>
 										<%
 									}
 								%>

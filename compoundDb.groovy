@@ -53,7 +53,7 @@ import java.util.Random
 def mdbHost				= 'localhost' // host where mongoDB is running
 def mdbPort				= 27017 // port where mongoDB listens
 def mdbDatabase			= 'simpleCompoundDatabase' // name of the database
-def bootstrap			= false // true/false
+def bootstrap			= true // true/false
 def clearAtStartup		= true //true/false
 def rpPort				= 8080 //define the (Ratpack) http port to run on
 def exportsFolder		= 'exports'
@@ -73,7 +73,7 @@ if (clearAtStartup == true){
 if (bootstrap){
 	def rand  = new Random()
 
-	5.times { Cid ->
+	50.times { Cid ->
 		def elements = 'C' + rand.nextInt(7) + 'H' + rand.nextInt(7) + 'O' + rand.nextInt(7)
 		upsertCompound(db, [
 			InChI: 'InChI=1S/' + elements + '/' + Cid, 
@@ -90,23 +90,33 @@ if (bootstrap){
 set 'templateRoot', 'templates'
 set 'port', rpPort
 
+
+/** API Calls **/
+// the a list of all compounds in the database
+get("/api/list") { respond(db.compounds.find()) }
+post("/api/list") { respond(db.compounds.find()) }
+
+//retrieve available labels from db
+get("/api/labels") { respond(findAllHeaders(db, reservedProperties)) }
+post("/api/labels") { respond(findAllHeaders(db, reservedProperties)) }
+
+// a single (full details) compound by ID
+get("/api/compound/:Cid") { respond(findCompoundByCid(db, urlparams.Cid as int)) }
+post("/api/compound") { respond(findCompoundByCid(db, params.Cid as int)) }
+
+// api search by label
+get("/api/search/:label/equals/:value"){ respond(findCompoundByLabel(db, urlparams.label, urlparams.value, false)) }
+get("/api/search/:label/regex/:value"){ respond(findCompoundByLabel(db, urlparams.label, urlparams.value, true)) }
+post("api/search"){	respond(findCompoundByLabel(db, params.label, params.value, (params.regex == 1 ? true : false))) }
+
+
+
+/** GUI **/
 // homepage
 get("/") { render "index.html", [compoundCount: db.compounds.find().size()] }
 
-// the a list of all compounds in the database
-get("/list") { respond(db.compounds.find()) }
-
-// a single (full details) compound by ID
-get("/compound/:Cid") { respond(findCompoundByCid(db, urlparams.Cid as int)) }
-
-// retrieve available labels from db
-get("/labels") { respond(findAllHeaders(db, reservedProperties)) }
-
 // search page
 get("/search") { render "search.html", [templateVars: ['headers': findAllHeaders(db, reservedProperties)]] }
-
-// search by label
-get("/search/:label/equals/:value"){ respond(findCompoundByLabel(db, urlparams.label, urlparams.value)) }
 
 register(["get", "post"], "/search/:method") {
 
@@ -261,23 +271,31 @@ private findCompoundByCid(db, int Cid){
 }
 
 // find compounds by a label
-private findCompoundByLabel(db, String label, String labelValue){
+private findCompoundByLabel(db, String label, labelValue, useRegex = false){
 	
+	//force label to correct CamelCase
+	label = toCamelCase(label) 
+		
+	//force Cid to int
+	if (label == 'Cid') { labelValue = labelValue as Integer }
+	
+	//prepare search hash
 	def findHash = [:]
-		findHash["${label}"] = ~"${labelValue}"
+	if (useRegex){ findHash["${label}"] = ~"${labelValue}" } else { findHash["${label}"] = labelValue } 
 	
 	return db.compounds.find(findHash)
 }
 
+// retrieve a unique list of headers used to label compounds
 private findAllHeaders(db, headersToSkip = []){
 
 	//prepare the headers
 	def headers = [].toList()
-	db.compounds.find().each {
+	db.compounds.find().each { 
 		headers = it.keySet().toList() + headers
 	}
 	
-	return headers.unique().findAll { headersToSkip.count(it) != 1 }.sort { a,b -> a <=> b}
+	return headers.unique().findAll { headersToSkip.count(it) != 1 }.sort { a,b -> a <=> b }
 }
 
 // insert or update a compound
@@ -301,8 +319,6 @@ private upsertCompound(db, HashMap compound){
 		
 		// update the Modified timestamp to track when changes are made to the compound
 		compound['Modified'] = new Date().time
-		
-		println compound
 		
 		// send changes to the database
 		db.compounds.update([Cid: compound['Cid']], [$set: compound], true)

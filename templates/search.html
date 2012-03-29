@@ -26,10 +26,10 @@
 				<td style="padding:10px" valign="top">
 					
 					<% if (templateVars?.params){ %>
-						search <i>${templateVars?.urlparams?.method ?: ''}</i> with parameters: <b>${templateVars?.params?.collect { it.key + ' ~' + it.value }?.join(', ')}</b><br /><br />
+						search <i>${templateVars?.urlparams?.method ?: ''}</i> with parameters: <b>${templateVars?.params?.collect { '<i>' + it.key + '</i>: ' + it.value }?.join(', ')}</b><br /><br />
 					<% } %> 
 					
-					<% if (templateVars?.urlparams?.method){ %>
+					<% if (templateVars?.urlparams?.method && templateVars[templateVars.urlparams.method].size()){ %>
 						<table>
 							<tr>
 								<th class="searchTH">Cid</th>

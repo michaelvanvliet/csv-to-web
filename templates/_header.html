@@ -5,6 +5,9 @@
 			body {
 				font:15px arial,sans-serif;
 			}
+			a {
+				color: #bdbdbd;
+			}
 		
 			.searchTD {
 				font:12px arial,sans-serif;
@@ -18,9 +21,14 @@
 				font-weight: bold;
 				text-align: left;
 			}
+			.content {
+				width: 95%;
+				margin: 3px auto;			
+			}
 			.title {
 				width: 100%;
 				text-align: center;
+				margin: 5px auto;
 			}
 			.menu {
 				width: 100%;
@@ -28,16 +36,28 @@
 				font:15px arial,sans-serif;
 				border: thin solid #cdcdcd;
 				padding: 5px;
+				margin: 5px auto;
+			}
+			.searchForms {
+				padding: 5px;
+				display: block;
+				width: 100%;
+				text-align: center;
+				margin: 5px auto;			
+			}
+			.commands {
+				font:11px arial,sans-serif;
 			}			
 		</style>
 	</head>
 	<body>
-		<div class="title">
-			<h1>Simple Chemical Compound database</h1>
-		</div>
-		
-		<div class="menu">
-			<a href="/search">search</a>
-			<a href="/export">export</a>
-			<a href="/import">import</a>
-		</div>
+		<div class="content">
+			<div class="title">
+				<h1>Simple Chemical Compound database</h1>
+			</div>
+			
+			<div class="menu">
+				<a href="/search">search</a>
+				<a href="/export">export</a>
+				<a href="/import">import</a>
+			</div>

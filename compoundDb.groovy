@@ -53,7 +53,7 @@ import java.util.Random
 def mdbHost				= 'localhost' // host where mongoDB is running
 def mdbPort				= 27017 // port where mongoDB listens
 def mdbDatabase			= 'simpleCompoundDatabase' // name of the database
-def bootstrap			= true // true/false
+def bootstrap			= false // true/false
 def clearAtStartup		= true //true/false
 def rpPort				= 8080 //define the (Ratpack) http port to run on
 def exportsFolder		= 'exports'
@@ -121,13 +121,13 @@ get("/search") { render "search.html", [templateVars: ['headers': findAllHeaders
 register(["get", "post"], "/search/:method") {
 
 	def templateVars = [:]
-	def response
+	def response = []
 
 	switch (urlparams.method){
-		case 'listAllCompounds'		:	response = findAllCompounds(db); break;
-		case 'searchByCid'			:	if (params.Cid){ response = findCompoundByCid(db, params.Cid as int) }; break;
-		default						:	def label = urlparams.method.split('_')[1]
-										response = findCompoundByLabel(db, label, params."${label}" as String);										
+		case 'listAllCompounds'		:	response = findAllCompounds(db)
+										break
+										
+		default						:	response = findCompoundByLabel(db, params.searchBy, params.searchValue as String, true)										
 	}
 	
 	// prepare the variables for the template
@@ -165,17 +165,19 @@ post("/import") {
 		
 		// iterate over the lines from the file to import
 		lines.each { line ->
-				
+							
 			//init empty compound
 			def compound = [:]
 			
 			line.split("\t").eachWithIndex { rowValue, columnIndex ->
 				if (header[columnIndex] != rowValue){ // make sure we skip the header when importing
 					
-					//see if we have to trim the value
-					if (rowValue[0] == '"' && rowValue[-1] == '"'){
-						rowValue = rowValue[1..-2] // trim the first and last "
-					}
+					if (rowValue){
+						//see if we have to trim the text qualifiers from the value
+						if (rowValue[0] == '"' && rowValue[-1] == '"'){
+							rowValue = rowValue[1..-2] // trim the first and last "
+						}
+					} 
 					
 					compound[header[columnIndex]] = rowValue
 				}

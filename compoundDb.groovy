@@ -276,14 +276,17 @@ private findCompoundByCid(db, int Cid){
 private findCompoundByLabel(db, String label, labelValue, useRegex = false){
 	
 	//force label to correct CamelCase
-	label = toCamelCase(label) 
-		
-	//force Cid to int
-	if (label == 'Cid') { labelValue = labelValue as Integer }
+	label = toCamelCase(label)
+	
+	//overwrite to use regex when looking for the Cid and force it to an interger
+	if (label == 'Cid') { 
+		useRegex = false
+		labelValue = labelValue as Integer
+	}
 	
 	//prepare search hash
 	def findHash = [:]
-	if (useRegex){ findHash["${label}"] = ~"${labelValue}" } else { findHash["${label}"] = labelValue } 
+	if (useRegex){ findHash["${label}"] = ~"(?ix)${labelValue}" } else { findHash["${label}"] = labelValue } 
 	
 	return db.compounds.find(findHash)
 }

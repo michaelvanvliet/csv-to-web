@@ -19,7 +19,7 @@
 	</div>
 	
 	<% if (templateVars?.urlparams?.method && templateVars[templateVars.urlparams.method].size()){ %>
-		<h2>Results</h2>
+		<h2>${templateVars[templateVars.urlparams.method].size()} results</h2>
 		<hr size="1">
 		<table>
 			<tr>

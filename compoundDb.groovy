@@ -48,13 +48,12 @@ import groovy.json.JsonBuilder
 import groovy.json.JsonOutput
 import java.util.Random
 
-
 // config
 def mdbHost				= 'localhost' // host where mongoDB is running
 def mdbPort				= 27017 // port where mongoDB listens
 def mdbDatabase			= 'simpleCompoundDatabase' // name of the database
 def bootstrap			= false // true/false
-def clearAtStartup		= true //true/false
+def clearAtStartup		= false //true/false
 def rpPort				= 8080 //define the (Ratpack) http port to run on
 def exportsFolder		= 'exports'
 def reservedProperties	= ['_id','Cid','Created','Modified']
@@ -71,9 +70,10 @@ if (clearAtStartup == true){
 
 // bootstrap
 if (bootstrap){
+	
 	def rand  = new Random()
-
-	50.times { Cid ->
+		
+	5.times { Cid ->
 		def elements = 'C' + rand.nextInt(7) + 'H' + rand.nextInt(7) + 'O' + rand.nextInt(7)
 		upsertCompound(db, [
 			InChI: 'InChI=1S/' + elements + '/' + Cid, 
@@ -88,26 +88,52 @@ if (bootstrap){
 
 // define Ratpack settings
 set 'templateRoot', 'templates'
-set 'port', rpPort
+set 'port', rpPort 
 
 
 /** API Calls **/
 // the a list of all compounds in the database
-get("/api/list") { respond(db.compounds.find()) }
-post("/api/list") { respond(db.compounds.find()) }
+get("/api/list") { 
+	response.setContentType('application/json')	
+	respond(db.compounds.find()) }
+post("/api/list") {
+	response.setContentType('application/json')	
+	return respond(db.compounds.find()) 
+}
 
 //retrieve available labels from db
-get("/api/labels") { respond(findAllHeaders(db, reservedProperties)) }
-post("/api/labels") { respond(findAllHeaders(db, reservedProperties)) }
+get("/api/labels") { 
+	response.setContentType('application/json')	
+	respond(findAllHeaders(db, reservedProperties))
+}
+post("/api/labels") {
+	response.setContentType('application/json')
+	respond(findAllHeaders(db, reservedProperties)) 
+}
 
 // a single (full details) compound by ID
-get("/api/compound/:Cid") { respond(findCompoundByCid(db, urlparams.Cid as int)) }
-post("/api/compound") { respond(findCompoundByCid(db, params.Cid as int)) }
+get("/api/compound/:Cid") { 
+	response.setContentType('application/json')
+	respond(findCompoundByCid(db, urlparams.Cid as int))
+}
+post("/api/compound") { 
+	response.setContentType('application/json')	
+	respond(findCompoundByCid(db, params.Cid as int))
+}
 
 // api search by label
-get("/api/search/:label/equals/:value"){ respond(findCompoundByLabel(db, urlparams.label, urlparams.value, false)) }
-get("/api/search/:label/regex/:value"){ respond(findCompoundByLabel(db, urlparams.label, urlparams.value, true)) }
-post("api/search"){	respond(findCompoundByLabel(db, params.label, params.value, (params.regex == 1 ? true : false))) }
+get("/api/search/:label/equals/:value"){ 
+	response.setContentType('application/json')	
+	respond(findCompoundByLabel(db, urlparams.label, urlparams.value, false))
+}
+get("/api/search/:label/regex/:value"){
+	response.setContentType('application/json')	
+	respond(findCompoundByLabel(db, urlparams.label, urlparams.value, true))
+}
+post("/api/search"){	
+	response.setContentType('application/json')	
+	respond(findCompoundByLabel(db, params.label, params.value, (params.regex as int == 1 ? true : false)))
+}
 
 
 
@@ -287,7 +313,7 @@ private findCompoundByLabel(db, String label, labelValue, useRegex = false){
 	//prepare search hash
 	def findHash = [:]
 	if (useRegex){ findHash["${label}"] = ~"(?ix)${labelValue}" } else { findHash["${label}"] = labelValue } 
-	
+		
 	return db.compounds.find(findHash)
 }
 
@@ -328,6 +354,7 @@ private upsertCompound(db, HashMap compound){
 		// send changes to the database
 		db.compounds.update([Cid: compound['Cid']], [$set: compound], true)
 	} catch(e) {
+		//TODO: Add a real logger
 		println 'Error saving the compound: ' + e
 		return false
 	}	

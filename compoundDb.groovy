@@ -156,7 +156,7 @@ get("/publish") {
 				cFile.write(compoundToHtml(compound))
 				
 			// add created compound file to index
-			compoundIndexHtml += '<a target="_blank" href="/public/' + compound['Cid'] + '">Compound ' + compound['Cid'] + '</a><br />\n'
+			compoundIndexHtml += '<a href="/public/' + compound['Cid'] + '">Compound ' + compound['Cid'] + '</a><br />\n'
 			
 		} catch (e) {
 			//TODO: handle error(s)

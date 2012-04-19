@@ -141,6 +141,40 @@ post("/api/search"){
 // homepage
 get("/") { render "index.html", [compoundCount: db.compounds.find().size()] }
 
+// published contents
+get("/publish") {
+	
+	def compounds = db.compounds.find()
+	def compoundIndexHtml = new File('templates/_header.html').text
+	
+	//generate compound pages (/public/:Cid)
+	compounds.each { compound ->
+		
+		//create/clear new compound file
+		try {
+			def cFile = new File('public/' + compound['Cid'] + '.html')
+				cFile.write(compoundToHtml(compound))
+				
+			// add created compound file to index
+			compoundIndexHtml += '<a target="_blank" href="/public/' + compound['Cid'] + '">Compound ' + compound['Cid'] + '</a><br />\n'
+			
+		} catch (e) {
+			//TODO: handle error(s)
+		}
+	}
+	
+	//generate compound index page (/public/index.html)
+	compoundIndexHtml += new File('templates/_footer.html').text //add footer
+	
+	def cIdxFile = new File('public/index.html')
+		cIdxFile.write(compoundIndexHtml)
+	 
+	render "publish.html" 
+}
+get("/public") { return new File('public/index.html').text }
+get("/public/:Cid") { return new File('public/' + urlparams.Cid + '.html').text }
+
+
 // search page
 get("/search") { render "search.html", [templateVars: ['headers': findAllHeaders(db, reservedProperties)]] }
 
@@ -368,4 +402,31 @@ private toCamelCase(String label){
 	label = label.split('-').collect { it[0].toUpperCase() + it.substring(1) }.join('')
 	
 	return label
+}
+
+private compoundToHtml(compound){
+	
+	def compoundHtml = ''
+	
+	// add html header
+	compoundHtml += new File('templates/_header.html').text
+	
+	// add content placeholder
+	compoundHtml += '\n\n|||BODY|||\n\n'
+	
+	// add html footer
+	compoundHtml += new File('templates/_footer.html').text
+	
+	def html = ''
+	// add compound Cid
+	html += '<h1>Compound ' + compound['Cid'] + '</h1>\n'
+	
+	// add nice table with properties
+	compound.each { property, value ->
+		html += '\t<b>' + property + '</b>:\t' + value + '<br />\n'
+	}
+	
+	compoundHtml = compoundHtml.replace('|||BODY|||', html)
+	
+	return compoundHtml	
 }

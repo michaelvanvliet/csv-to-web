@@ -38,7 +38,7 @@
   
   
 // imports
-@Grab('com.gmongo:gmongo:0.8')
+@Grab('com.gmongo:gmongo:0.9.5')
 @Grab('commons-fileupload:commons-fileupload:1.2.2')
 @Grab('commons-io:commons-io:1.3.2')
 import com.gmongo.GMongo 
@@ -134,7 +134,10 @@ post("/api/search"){
 	response.setContentType('application/json')	
 	respond(findCompoundByLabel(db, params.label, params.value, (params.regex as int == 1 ? true : false)))
 }
-
+post("/api/searchbetween"){
+	response.setContentType('application/json')
+	respond(findCompoundByLabelBetween(db, params.label, params.valueA as float, params.valueB as float))
+}
 
 
 /** GUI **/
@@ -309,14 +312,9 @@ private formatResponse(result) {
 	def formattedResults = ''
 	
 	switch(result.getClass().toString()){
-		
-		case 'class java.util.ArrayList' :	formattedResults = result.sort { a,b -> a <=> b }
-											break
-		
 		case 'class com.mongodb.DBCursor' : formattedResults = result.collect { it.findAll { it.key != '_id' } }.sort { a,b -> a.id <=> b.id }
 											break
-		
-		default : formattedResults = results
+		default : formattedResults = result
 	}
 	
 	return ['results': formattedResults, 'count': result.size()]
@@ -335,20 +333,45 @@ private findCompoundByCid(db, int Cid){
 // find compounds by a label
 private findCompoundByLabel(db, String label, labelValue, useRegex = false){
 	
-	//force label to correct CamelCase
-	label = toCamelCase(label)
+	def findHash = [:]
 	
-	//overwrite to use regex when looking for the Cid and force it to an interger
-	if (label == 'Cid') { 
-		useRegex = false
-		labelValue = labelValue as Integer
+	try {
+	
+		//force label to correct CamelCase
+		label = toCamelCase(label)
+		
+		//overwrite to use regex when looking for the Cid and force it to an interger
+		if (label == 'Cid') { 
+			useRegex = false
+			labelValue = labelValue as int
+		}
+		
+		//prepare search hash
+		if (useRegex){ findHash["${label}"] = ~"(?ix)${labelValue}" } else { findHash["${label}"] = labelValue } 
+	} catch (e) {
+		findHash['Cid'] = -1 //return nothing
 	}
 	
-	//prepare search hash
-	def findHash = [:]
-	if (useRegex){ findHash["${label}"] = ~"(?ix)${labelValue}" } else { findHash["${label}"] = labelValue } 
-		
 	return db.compounds.find(findHash)
+}
+
+private findCompoundByLabelBetween(db, String label, float labelValueA, float labelValueB){
+
+	def compoundsInBetween = []
+	
+	db.compounds.find().each { compound ->
+		
+		float searchValue = compound."${label}"
+		float min = labelValueA
+		float max = labelValueB
+		
+		if (searchValue  >= min && searchValue <= max){
+			Map c = compound
+			compoundsInBetween.add(c)
+		}
+	}
+	
+	return compoundsInBetween 
 }
 
 // retrieve a unique list of headers used to label compounds
@@ -396,11 +419,13 @@ private upsertCompound(db, HashMap compound){
 	return true
 }
 
-private toCamelCase(String label){
-	label = label.replaceAll(/(\w)(\w*)/) { wholeMatch, initialLetter, restOfWord -> initialLetter.toUpperCase() + restOfWord }
-	label = label.split('_').collect { it[0].toUpperCase() + it.substring(1) }.join('')
-	label = label.split('-').collect { it[0].toUpperCase() + it.substring(1) }.join('')
-	
+private toCamelCase(String label = ''){
+	if (label){ // not null or '' 
+		label = label.replaceAll(/(\w)(\w*)/) { wholeMatch, initialLetter, restOfWord -> initialLetter.toUpperCase() + restOfWord }
+		label = label.split('_').collect { it[0].toUpperCase() + it.substring(1) }.join('')
+		label = label.split('-').collect { it[0].toUpperCase() + it.substring(1) }.join('')
+	}
+
 	return label
 }
 

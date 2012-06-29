@@ -1,25 +1,12 @@
 /**
 
-	This is an example how to create a simple chemical compound database using:
+	Create a search website/API from a CSV file
 	
 	- Groovy (http://groovy.codehaus.org)
 	- Gradle (http://www.gradle.org
 	- Ratpack (https://github.com/bleedingwolf/Ratpack)
 	- GMongo (https://github.com/poiati/gmongo)
 	- MongoDB (http://www.mongodb.org)
-	
-	 ____  ____  ____  ____  ____  ____ 
-	||S ||||i ||||m ||||p ||||l ||||e ||
-	|/__\||/__\||/__\||/__\||/__\||/__\|
-		 ____  ____  ____  ____  ____  ____  ____  ____ 
-		||C ||||h ||||e ||||m ||||i ||||c ||||a ||||l ||
-		|/__\||/__\||/__\||/__\||/__\||/__\||/__\||/__\|
-			 ____  ____  ____  ____  ____  ____  ____  ____ 
-			||C ||||o ||||m ||||p ||||o ||||u ||||n ||||d ||
-			|/__\||/__\||/__\||/__\||/__\||/__\||/__\||/__\|
-				 ____  ____  ____  ____  ____  ____  ____  ____ 
-				||D ||||a ||||t ||||a ||||b ||||a ||||s ||||e ||
-				|/__\||/__\||/__\||/__\||/__\||/__\||/__\||/__\|
 	
 	Copyright 2012 Michael van Vliet, Netherlands Metabolomics Centre (NMC) and Netherlands Bioinformatics Centre (NBIC) 
 
@@ -48,15 +35,16 @@ import groovy.json.JsonBuilder
 import groovy.json.JsonOutput
 import java.util.Random
 
+
 // config
 def mdbHost				= 'localhost' // host where mongoDB is running
 def mdbPort				= 27017 // port where mongoDB listens
-def mdbDatabase			= 'simpleCompoundDatabase' // name of the database
+def mdbDatabase			= 'csv2web' // name of the database
 def bootstrap			= false // true/false
 def clearAtStartup		= false //true/false
 def rpPort				= 8080 //define the (Ratpack) http port to run on
 def exportsFolder		= 'exports'
-def reservedProperties	= ['_id','Cid','Created','Modified']
+def reservedProperties	= ['_id','Rid','Created','Modified']
  
  
 // connect to the database
@@ -65,7 +53,7 @@ def db 		= gmongo.getDB	("${mdbDatabase}")
 
 //check if we need to clear the database before starting
 if (clearAtStartup == true){
-	db.compounds.drop() //clear old stuff
+	db.records.drop() //clear old stuff
 }
 
 // bootstrap
@@ -73,10 +61,10 @@ if (bootstrap){
 	
 	def rand  = new Random()
 		
-	5.times { Cid ->
+	5.times { Rid ->
 		def elements = 'C' + rand.nextInt(7) + 'H' + rand.nextInt(7) + 'O' + rand.nextInt(7)
-		upsertCompound(db, [
-			InChI: 'InChI=1S/' + elements + '/' + Cid, 
+		upsertRecord(db, [
+			InChI: 'InChI=1S/' + elements + '/' + Rid, 
 			elements: elements, 
 			contributor: 'myEmployer',
 			owner: 'me',
@@ -92,13 +80,13 @@ set 'port', rpPort
 
 
 /** API Calls **/
-// the a list of all compounds in the database
+// the a list of all records in the database
 get("/api/list") { 
 	response.setContentType('application/json')	
-	respond(db.compounds.find()) }
+	respond(db.records.find()) }
 post("/api/list") {
 	response.setContentType('application/json')	
-	return respond(db.compounds.find()) 
+	return respond(db.records.find()) 
 }
 
 //retrieve available labels from db
@@ -111,71 +99,71 @@ post("/api/labels") {
 	respond(findAllHeaders(db, reservedProperties)) 
 }
 
-// a single (full details) compound by ID
-get("/api/compound/:Cid") { 
+// a single (full details) record by ID
+get("/api/record/:Rid") { 
 	response.setContentType('application/json')
-	respond(findCompoundByCid(db, urlparams.Cid as int))
+	respond(findRecordByRid(db, urlparams.Rid as int))
 }
-post("/api/compound") { 
+post("/api/record") { 
 	response.setContentType('application/json')	
-	respond(findCompoundByCid(db, params.Cid as int))
+	respond(findRecordByRid(db, params.Rid as int))
 }
 
 // api search by label
 get("/api/search/:label/equals/:value"){ 
 	response.setContentType('application/json')	
-	respond(findCompoundByLabel(db, urlparams.label, urlparams.value, false))
+	respond(findRecordByLabel(db, urlparams.label, urlparams.value, false))
 }
 get("/api/search/:label/regex/:value"){
 	response.setContentType('application/json')	
-	respond(findCompoundByLabel(db, urlparams.label, urlparams.value, true))
+	respond(findRecordByLabel(db, urlparams.label, urlparams.value, true))
 }
 post("/api/search"){	
 	response.setContentType('application/json')	
-	respond(findCompoundByLabel(db, params.label, params.value, (params.regex as int == 1 ? true : false)))
+	respond(findRecordByLabel(db, params.label, params.value, (params.regex as int == 1 ? true : false)))
 }
 post("/api/searchbetween"){
 	response.setContentType('application/json')
-	respond(findCompoundByLabelBetween(db, params.label, params.valueA as float, params.valueB as float))
+	respond(findRecordByLabelBetween(db, params.label, params.valueA as float, params.valueB as float))
 }
 
 
 /** GUI **/
 // homepage
-get("/") { render "index.html", [compoundCount: db.compounds.find().size()] }
+get("/") { render "index.html", [recordCount: db.records.find().size()] }
 
 // published contents
 get("/publish") {
 	
-	def compounds = db.compounds.find()
-	def compoundIndexHtml = new File('templates/_header.html').text
+	def records = db.records.find()
+	def recordIndexHtml = new File('templates/_header.html').text
 	
-	//generate compound pages (/public/:Cid)
-	compounds.each { compound ->
+	//generate record pages (/public/:Rid)
+	records.each { record ->
 		
-		//create/clear new compound file
+		//create/clear new record file
 		try {
-			def cFile = new File('public/' + compound['Cid'] + '.html')
-				cFile.write(compoundToHtml(compound))
+			def cFile = new File('public/' + record['Rid'] + '.html')
+				cFile.write(recordToHtml(record))
 				
-			// add created compound file to index
-			compoundIndexHtml += '<a href="/public/' + compound['Cid'] + '">Compound ' + compound['Cid'] + '</a><br />\n'
+			// add created record file to index
+			recordIndexHtml += '<a href="/public/' + record['Rid'] + '">Record ' + record['Rid'] + '</a><br />\n'
 			
 		} catch (e) {
 			//TODO: handle error(s)
 		}
 	}
 	
-	//generate compound index page (/public/index.html)
-	compoundIndexHtml += new File('templates/_footer.html').text //add footer
+	//generate record index page (/public/index.html)
+	recordIndexHtml += new File('templates/_footer.html').text //add footer
 	
-	def cIdxFile = new File('public/index.html')
-		cIdxFile.write(compoundIndexHtml)
+	def RidxFile = new File('public/index.html')
+		RidxFile.write(recordIndexHtml)
 	 
 	render "publish.html" 
 }
 get("/public") { return new File('public/index.html').text }
-get("/public/:Cid") { return new File('public/' + urlparams.Cid + '.html').text }
+get("/public/:Rid") { return new File('public/' + urlparams.Rid + '.html').text }
 
 
 // search page
@@ -187,10 +175,10 @@ register(["get", "post"], "/search/:method") {
 	def response = []
 
 	switch (urlparams.method){
-		case 'listAllCompounds'		:	response = findAllCompounds(db)
+		case 'listAllRecords'		:	response = findAllRecords(db)
 										break
 										
-		default						:	response = findCompoundByLabel(db, params.searchBy, params.searchValue as String, true)										
+		default						:	response = findRecordByLabel(db, params.searchBy, params.searchValue as String, true)										
 	}
 	
 	// prepare the variables for the template
@@ -202,7 +190,7 @@ register(["get", "post"], "/search/:method") {
 	render "search.html", [templateVars: templateVars]
 }
 
-// add compounds page
+// add records page
 get("/import") { render "import.html" }
 
 post("/import") {
@@ -219,18 +207,18 @@ post("/import") {
 		List files = upload.parseRequest(request)
 		
 		// Merge file(s)
-		def compoundData = ''	
-		files.each { compoundData += it.getString() }
+		def recordData = ''	
+		files.each { recordData += it.getString() }
 		
 		// Create lists with the lines and read the header
-		def lines = compoundData.replaceAll('\r\n','\n').replaceAll('\r','\n').split('\n')
+		def lines = recordData.replaceAll('\r\n','\n').replaceAll('\r','\n').split('\n')
 		def header = lines[0].split("\t")
 		
 		// iterate over the lines from the file to import
 		lines.each { line ->
 							
-			//init empty compound
-			def compound = [:]
+			//init empty record
+			def record = [:]
 			
 			line.split("\t").eachWithIndex { rowValue, columnIndex ->
 				if (header[columnIndex] != rowValue){ // make sure we skip the header when importing
@@ -242,13 +230,13 @@ post("/import") {
 						}
 					} 
 					
-					compound[header[columnIndex]] = rowValue
+					record[header[columnIndex]] = rowValue
 				}
 			}
 			
-			if (compound != [:]){		
-				//update or insert this compound
-				upsertCompound(db, compound)
+			if (record != [:]){		
+				//update or insert this record
+				upsertRecord(db, record)
 			}
 				
 		}		
@@ -262,28 +250,28 @@ get("/" + exportsFolder + "/:file"){
 	return new File(exportsFolder + '/' + urlparams.file).text
 }
 	
-//export compounds
+//export records
 get("/export") {
 	
 	if (params.doExport){
 	
-		//fetch all compounds
-		def compounds = formatResponse(db.compounds.find())
+		//fetch all records
+		def records = formatResponse(db.records.find())
 
 		//prepare the headers
 		def headers = findAllHeaders(db, reservedProperties).sort { a,b -> a <=> b}
 	
 		// add the header to the CSV
-		def csvOut = "Cid\t" + headers.join("\t") + "\n"
+		def csvOut = "Rid\t" + headers.join("\t") + "\n"
 
-		//iterate over compounds
-		compounds['results'].each { compound ->
+		//iterate over records
+		records['results'].each { record ->
 		
-			csvOut += compound.Cid
+			csvOut += record.Rid
 		
 			//iterate over all available headers
 			headers.each { header ->			
-				csvOut +=  "\t" + compound."${header}"
+				csvOut +=  "\t" + record."${header}"
 			}
 			
 			csvOut +=  "\n"
@@ -320,18 +308,18 @@ private formatResponse(result) {
 	return ['results': formattedResults, 'count': result.size()]
 }
 
-// find all compounds
-private findAllCompounds(db){
-	return db.compounds.find()
+// find all records
+private findAllRecords(db){
+	return db.records.find()
 }
 
-// find compound by id
-private findCompoundByCid(db, int Cid){
-	return db.compounds.find(Cid: Cid)
+// find record by id
+private findRecordByRid(db, int Rid){
+	return db.records.find(Rid: Rid)
 }
 
-// find compounds by a label
-private findCompoundByLabel(db, String label, labelValue, useRegex = false){
+// find records by a label
+private findRecordByLabel(db, String label, labelValue, useRegex = false){
 	
 	def findHash = [:]
 	
@@ -340,8 +328,8 @@ private findCompoundByLabel(db, String label, labelValue, useRegex = false){
 		//force label to correct CamelCase
 		label = toCamelCase(label)
 		
-		//overwrite to use regex when looking for the Cid and force it to an interger
-		if (label == 'Cid') { 
+		//overwrite to use regex when looking for the Rid and force it to an interger
+		if (label == 'Rid') { 
 			useRegex = false
 			labelValue = labelValue as int
 		}
@@ -349,70 +337,70 @@ private findCompoundByLabel(db, String label, labelValue, useRegex = false){
 		//prepare search hash
 		if (useRegex){ findHash["${label}"] = ~"(?ix)${labelValue}" } else { findHash["${label}"] = labelValue } 
 	} catch (e) {
-		findHash['Cid'] = -1 //return nothing
+		findHash['Rid'] = -1 //return nothing
 	}
 	
-	return db.compounds.find(findHash)
+	return db.records.find(findHash)
 }
 
-private findCompoundByLabelBetween(db, String label, float labelValueA, float labelValueB){
+private findRecordByLabelBetween(db, String label, float labelValueA, float labelValueB){
 
-	def compoundsInBetween = []
+	def recordsInBetween = []
 	
-	db.compounds.find().each { compound ->
+	db.records.find().each { record ->
 		
-		float searchValue = compound."${label}"
+		float searchValue = record."${label}"
 		float min = labelValueA
 		float max = labelValueB
 		
 		if (searchValue  >= min && searchValue <= max){
-			Map c = compound
-			compoundsInBetween.add(c)
+			Map c = record
+			recordsInBetween.add(c)
 		}
 	}
 	
-	return compoundsInBetween 
+	return recordsInBetween 
 }
 
-// retrieve a unique list of headers used to label compounds
+// retrieve a unique list of headers used to label records
 private findAllHeaders(db, headersToSkip = []){
 
 	//prepare the headers
 	def headers = [].toList()
-	db.compounds.find().each { 
+	db.records.find().each { 
 		headers = it.keySet().toList() + headers
 	}
 	
 	return headers.unique().findAll { headersToSkip.count(it) != 1 }.sort { a,b -> a <=> b }
 }
 
-// insert or update a compound
-private upsertCompound(db, HashMap compound){
+// insert or update a record
+private upsertRecord(db, HashMap record){
 	
 	//some characters in property names give problems retrieving data, we force labels to CamelCase when it has a space, - or a _
-	def tempCompound = [:]
-	compound.each { propertyKey, propertyValue ->
-		tempCompound[toCamelCase(propertyKey)] = propertyValue
+	def tempRecord = [:]
+	record.each { propertyKey, propertyValue ->
+		tempRecord[toCamelCase(propertyKey)] = propertyValue
 	}
-	compound = tempCompound
+	record = tempRecord
 	
-	//there are some reserved compound properties (e.g Cid, Created, Modified)
+	//there are some reserved record properties (e.g Rid, Created, Modified)
 	try {
-		// if we cannot find a compound with this id, we set the Created to match the Modified property
-		if (compound['Cid'] == null || !findCompoundByCid(db, compound['Cid'] as int)){
-			//TODO: make this look for the highest Cid and increment this with one, the way we do it now only works because we start Cid with 0
-			compound['Cid']		= (db.compounds.find().size() ?: 0) as int //force the Cid to auto-increment 
-			compound['Created'] = new Date().time
+		// if we cannot find a record with this id, we set the Created to match the Modified property
+		if (record['Rid'] == null || !findRecordByRid(db, record['Rid'] as int)){
+			//TODO: make this look for the highest Rid and increment this with one, the way we do it now only works because we start Rid with 0
+			record['Rid']		= (db.records.find().size() ?: 0) as int //force the Rid to auto-increment 
+			record['Created'] = new Date().time
 		} 
 		
-		// update the Modified timestamp to track when changes are made to the compound
-		compound['Modified'] = new Date().time
+		// update the Modified timestamp to track when changes are made to the record
+		record['Modified'] = new Date().time
 		
 		// send changes to the database
-		db.compounds.update([Cid: compound['Cid']], [$set: compound], true)
+		db.records.update([Rid: record['Rid']], [$set: record], true)
 	} catch(e) {
 		//TODO: Add a real logger
-		println 'Error saving the compound: ' + e
+		println 'Error saving the record: ' + e
 		return false
 	}	
 	
@@ -429,29 +417,29 @@ private toCamelCase(String label = ''){
 	return label
 }
 
-private compoundToHtml(compound){
+private recordToHtml(record){
 	
-	def compoundHtml = ''
+	def recordHtml = ''
 	
 	// add html header
-	compoundHtml += new File('templates/_header.html').text
+	recordHtml += new File('templates/_header.html').text
 	
 	// add content placeholder
-	compoundHtml += '\n\n|||BODY|||\n\n'
+	recordHtml += '\n\n|||BODY|||\n\n'
 	
 	// add html footer
-	compoundHtml += new File('templates/_footer.html').text
+	recordHtml += new File('templates/_footer.html').text
 	
 	def html = ''
-	// add compound Cid
-	html += '<h1>Compound ' + compound['Cid'] + '</h1>\n'
+	// add record Rid
+	html += '<h1>Record ' + record['Rid'] + '</h1>\n'
 	
 	// add nice table with properties
-	compound.each { property, value ->
+	record.each { property, value ->
 		html += '\t<b>' + property + '</b>:\t' + value + '<br />\n'
 	}
 	
-	compoundHtml = compoundHtml.replace('|||BODY|||', html)
+	recordHtml = recordHtml.replace('|||BODY|||', html)
 	
-	return compoundHtml	
+	return recordHtml	
 }

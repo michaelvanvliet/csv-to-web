@@ -4,14 +4,14 @@
 	
 		<form action="/search/searchByLabel" method="post">
 			<select name="searchBy">
-				<option value="Cid" <% if(templateVars.params?.searchBy && templateVars.params?.searchBy == 'Cid'){ %>selected<% } %>>Cid</option>
+				<option value="Rid" <% if(templateVars.params?.searchBy && templateVars.params?.searchBy == 'Rid'){ %>selected<% } %>>Rid</option>
 				<% templateVars.headers.each { header -> %>
 					<option value="${header}" <% if(templateVars.params?.searchBy && templateVars.params?.searchBy == header){ %>selected<% } %>>${header}</option>
 				<% } %>						
 			</select> 
 			<input type="text" name="searchValue" placeholder="value" <% if(templateVars.params?.searchValue){ %>value="${templateVars.params?.searchValue}"<% } %> style="width:250px;"/>
 			<input type="submit" value="Search" style="width:200px;"/>
-		</form><form action="/search/listAllCompounds" method="post"><input type="submit" value="List all compounds" /></form>
+		</form><form action="/search/listAllRecords" method="post"><input type="submit" value="List all records" /></form>
 			
 		<% if (templateVars?.params){ %>
 			search <i>${templateVars?.urlparams?.method ?: ''}</i> with parameters: <b>${templateVars?.params?.collect { '<i>' + it.key + '</i>: ' + it.value }?.join(', ')}</b><br /><br />
@@ -23,14 +23,14 @@
 		<hr size="1">
 		<table>
 			<tr>
-				<th class="searchTH">Cid</th>
+				<th class="searchTH">Rid</th>
 				<th class="searchTH">${templateVars?.headers?.collect { it }?.join('</th><th class="searchTH">')}</th></tr>
 				<%
-					templateVars[templateVars.urlparams.method].each { compoundProperty ->
+					templateVars[templateVars.urlparams.method].each { recordProperty ->
 						%>
 							<tr>
-								<td class="searchTD">${compoundProperty.Cid}</td>
-								<td class="searchTD">${templateVars?.headers?.collect { compoundProperty[it] ?: '' }?.join('</td><td class="searchTD">')}</td></tr>
+								<td class="searchTD">${recordProperty.Rid}</td>
+								<td class="searchTD">${templateVars?.headers?.collect { recordProperty[it] ?: '' }?.join('</td><td class="searchTD">')}</td></tr>
 						<%
 					}
 				%>

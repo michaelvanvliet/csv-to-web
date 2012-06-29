@@ -1,10 +1,9 @@
-Simple Chemical Compound Database
+CSV to Web
 =================================
 
-The Simple Chemical Compound Database (here in after referred to as "SCCDb") is a lightweight
-container for chemical compound information. It uses Ratpack to serve the HTTP stuff, Groovy and
-GMongo to do the magic and MongoDB persists the data. Gradle is only required to get Ratpack running
-on you machine.
+It turns a CSV file into a search website/API
+
+> It uses Ratpack to serve the HTTP stuff, Groovy and GMongo to do the magic and MongoDB persists the data. Gradle is only required to get Ratpack running on you machine.
 
 Requirements
 ------------
@@ -24,7 +23,7 @@ Getting Started
 
 Just run:
 
-	$ ratpack compoundDb.groovy
+	$ ratpack csv2web.groovy
 	
 This should start an instance of Jetty. Output looks like this:
 
@@ -35,7 +34,7 @@ This should start an instance of Jetty. Output looks like this:
 	
 Now open a browser and enter: http://localhost:8080
 
-More information on the [https://github.com/michaelvanvliet/Simple-Compound-Database/wiki](wiki)
+More information on the [https://github.com/michaelvanvliet/csv-to-web/wiki](wiki)
 
 Credits
 -------

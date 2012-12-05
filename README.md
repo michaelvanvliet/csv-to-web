@@ -24,14 +24,14 @@ Getting Started
 Just run:
 
 	$ ratpack csv2web.groovy
-	
+
 This should start an instance of Jetty. Output looks like this:
 
 	842 [main] INFO com.bleedingwolf.ratpack.RatpackApp - Starting Ratpack app with config: {port=8080, templateRoot=templates}
 	880 [main] INFO org.mortbay.log - Logging to org.slf4j.impl.SimpleLogger(org.mortbay.log) via org.mortbay.log.Slf4jLog
 	939 [main] INFO org.mortbay.log - jetty-6.1.26
 	1068 [main] INFO org.mortbay.log - Started SocketConnector@0.0.0.0:8080
-	
+
 Now open a browser and enter: http://localhost:8080
 
 More information on the [https://github.com/michaelvanvliet/csv-to-web/wiki](wiki)
